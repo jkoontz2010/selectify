@@ -8,42 +8,45 @@ Array.prototype.insert = function (index, item) {
   this.splice(index, 0, item);
 };
 
-const rulesets = [
-  {
-    matchers: [
-      "font-size: $font-size-medium",
-      "font-weight: $font-weight-medium",
-    ],
-    actions: {
-      remove: [
-        "font-size: $font-size-medium",
-        "font-weight: $font-weight-medium",
-      ],
-      add: ["@include body1;"],
-    },
-  },
-];
-
 function getActionsFromRulesetsForText(rulesets, text) {
   const selectedTextLines = text.split("\n");
+  const matchedRulesets = [];
   for (let i = 0; i < rulesets.length; i++) {
     const ruleset = rulesets[i];
     const matchedLines = [];
-    const matchedRulesets = new Set();
+    const matchedMatchers = new Set();
     // check that this ruleset's matchers are all satisfied. We use the separate lines to make changing easier later
     selectedTextLines.forEach((line, lineIndex) => {
       const [match, matchIndex] = getMatchFromLine(line, ruleset.matchers);
       if (match) {
-        matchedRulesets.add(matchIndex);
+        matchedMatchers.add(matchIndex);
         matchedLines.push(lineIndex);
       }
     });
 
     // sets guarantee uniqueness, so if the number of items in the set matches the number of matchers, the ruleset has been satisfied
-    if (matchedRulesets.size === ruleset.matchers.length) {
-      return ruleset.actions;
+    if (matchedMatchers.size === ruleset.matchers.length) {
+      matchedRulesets.push(ruleset);
     }
   }
+
+  return getMostSpecificRulesetMatch(matchedRulesets).actions;
+}
+
+function getMostSpecificRulesetMatch(matchedRulesets) {
+
+  if (matchedRulesets.length === 0) return undefined;
+  if (matchedRulesets.length === 1) return matchedRulesets[1];
+
+  let highestMatchersRuleset;
+  matchedRulesets.forEach((ruleset) => {
+    if (!highestMatchersRuleset) highestMatchersRuleset = ruleset;
+
+    if (ruleset.matchers.length > highestMatchersRuleset.matchers.length)
+      highestMatchersRuleset = ruleset;
+  });
+
+  return highestMatchersRuleset;
 }
 
 function getMatchFromLine(line, matchers) {
@@ -62,7 +65,6 @@ function getMatchFromLine(line, matchers) {
 
 function performActionsOnText(actions, text) {
   const textLines = text.split("\n");
-  let result;
   let linesBuffer = [];
 
   function removeFromTextLines(matchers) {
@@ -106,8 +108,8 @@ function activate(context) {
     "selectify.helloWorld",
     function () {
       // The code you place here will be executed every time your command is executed
-	  let configuration = vscode.workspace.getConfiguration('selectify');
-	  const rulesets = configuration.rulesets;
+      let configuration = vscode.workspace.getConfiguration("selectify");
+      const rulesets = configuration.rulesets;
       const editor = vscode.window.activeTextEditor;
       let selectedText = editor.document.getText(editor.selection);
       const actions = getActionsFromRulesetsForText(rulesets, selectedText);
