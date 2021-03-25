@@ -36,7 +36,7 @@ function getActionsFromRulesetsForText(rulesets, text) {
 function getMostSpecificRulesetMatch(matchedRulesets) {
 
   if (matchedRulesets.length === 0) return undefined;
-  if (matchedRulesets.length === 1) return matchedRulesets[1];
+  if (matchedRulesets.length === 1) return matchedRulesets[0];
 
   let highestMatchersRuleset;
   matchedRulesets.forEach((ruleset) => {
